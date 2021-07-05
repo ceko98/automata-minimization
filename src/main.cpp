@@ -1,50 +1,48 @@
-#include <unordered_map>
-#include <utility>
-#include <string>
 #include <iostream>
-#include "../include/Automata.h"
+#include "../include/Transformer.h"
 
 using namespace std;
 
-vector<int> sort(vector<vector<int>> &M)
-{
-    vector<int> sorted_rows(M.size());
-    for (int j = 3 - 1; j >= 0; j--)
-    {
-        vector<queue<int>> buckets(M.size());
-        for (int i = 0; i < M.size(); i++)
-        {
-            buckets[M[i][j]].push(i);
-        }
-        int k = 0;
-        for (int i = 0; i < buckets.size(); i++)
-        {
-            while (!buckets[i].empty())
-            {
-                sorted_rows[k++] = buckets[i].front();
-                buckets[i].pop();
-            }
-        }
-    }
-    return sorted_rows;
-}
-
 int main() {
-    vector<vector<int>> m = {
-        {1, 2, 1},
-        {0, 0, 1},
-        {2, 2, 2},
-        {0, 3, 3},
-        {1, 4, 4},
-        {2, 5, 5},
+    int Q_size = 9;
+    int q0 = 0;
+    vector<bool> F = {0,0,0,1,0,0,1,0,0};
+    unordered_map<int, unordered_map<char, int>> delta = {
+        {0, { {'a', 1}, {'b', 4} }},
+        {1, { {'a', 2}, {'b', 3} }},
+        {2, { {'b', 3}, {'a', 7} }},
+        {3, { {'b', 3} }},
+        {4, { {'b', 5} }},
+        {5, { {'a', 6} }},
+        {6, { {'a', 6} }},
+        {8, { {'a', 2} }},
     };
-    vector<int> sorted = sort(m);
-    for (size_t i = 0; i < sorted.size(); i++)
-    {
-        std::cout << sorted[i] << " " << std::endl;
-    }
-    
-    // Automata a;
-    // a.sort();
+    unordered_map<int, unordered_map<char, int>> delta_rev = {
+        {1, { {'a', 0} }},
+        {2, { {'a', 1} }},
+        {3, { {'b', 1}, {'b', 2}, {'b', 3} }},
+        {4, { {'b', 0} }},
+        {5, { {'a', 4} }},
+        {6, { {'a', 5}, {'a', 6} }},
+    };
+    unordered_map<pair<int, char>, string> lambda = {
+        {{0, 'a'}, "a"}, {{0, 'b'}, "b"},
+        {{1, 'a'}, ""}, {{1, 'b'}, "a"},
+        {{2, 'b'}, "a"},
+        {{3, 'b'}, "b"},
+        {{4, 'b'}, ""},
+        {{5, 'a'}, "a"},
+        {{6, 'a'}, "a"},
+    };
+    string start = "";
+    unordered_map<int, string> pfi = {
+        {3, "aa"}, {6, "aa"}
+    };
+    Transformer t(
+        Q_size, q0, F, start, delta, delta_rev, lambda, pfi
+    );
+
+    t.trim();
+
     return 0;
 }
