@@ -128,12 +128,22 @@ public:
                 M[i][j] = class_arr[Delta[{B[i], Sigma[j]}]];
             }
         }
-        
+        vector<int> sorted_rows = sort(M);
+        int current_class = class_arr[B[0]];
+        for (int i = 0; i < B.size(); i++)
+        {
+            if (i != 0 && !same_vectors(M[sorted_rows[i]], M[sorted_rows[i - 1]]))
+            {
+                current_class = next_class;
+                next_class += 1;
+            }
+            class_arr[B[sorted_rows[i]]] = current_class;
+        }
         
         return next_class;
     }
 
-    void sort(vector<vector<int>> &M)
+    vector<int> sort(vector<vector<int>> &M)
     {
         vector<int> sorted_rows(M.size());
         for (int j = Sigma.size() - 1; j >= 0; j--)
@@ -153,6 +163,20 @@ public:
                 }
             }
         }
+        return sorted_rows;
+    }
+
+    bool same_vectors(vector<int> a, vector<int> b)
+    {
+        for (int i = 0; i < a.size(); i++)
+        {
+            if (a[i] != b[i])
+            {
+                return false;
+            }
+        }
+        
+        return true;
     }
 
     void init_with(int *arr, int sz, int val)
