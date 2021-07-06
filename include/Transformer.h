@@ -225,10 +225,8 @@ public:
             {
                 Delta_A[p].insert({ Lambda[{p, a}], q });
                 Delta_A_rev[q].insert({ Lambda[{p, a}], p });
-                cout << "(" << p << " " << Lambda[{p, a}] << " " << q << ")" << endl;
             }
         }
-        cout << "==============" << endl;
         for (int q = 0; q < Q_size; q++)
         {
             if (F[q])
@@ -238,26 +236,7 @@ public:
                 Delta_A_rev[F_A].insert({ Pfi[q], q });
             }
         }
-
-        for(auto & [p, trans]: Delta_A)
-        {
-            for(auto & [a, q]: trans)
-            {
-                cout << "(" << p << " " << a << " " << q << ")" << endl;
-            }
-        }
-        cout << "==============" << endl;
-
-        for(auto & [p, trans]: Delta_A_rev)
-        {
-            for(auto & [a, q]: trans)
-            {
-                cout << "(" << p << " " << a << " " << q << ")" << endl;
-            }
-        }
-
-        cout << "==============" << endl;
-
+        
         vector<string> words(Q_A_size);
         vector<bool> visited(Q_A_size, false);
         find_words(F_A, "", visited, q0, Delta_A_rev, words);
@@ -270,8 +249,17 @@ public:
                 for_add.push_back(a + words[q]);
             }
             string prefix = largest_common_prefix(for_add);
-
+            for(const auto& [a, q] : Delta_A[p])
+            {
+                Delta_A_plus[p].insert({prefix, F_A});
+            }
         }
+
+        for (int i = 0; i < words.size(); i++)
+        {
+            cout << i << " " << words[i] << endl;
+        }
+        cout << "=============" << endl;
         
         vector<int> heap;
         vector<int> prev(Q_A_size, -1);
@@ -383,7 +371,10 @@ public:
 
         for(const auto& [word, next]: transitions[current])
         {
-            find_words(next, word + current_word, visited, initial, transitions, words);
+            if (!visited[next])
+            {
+                find_words(next, word + current_word, visited, initial, transitions, words);
+            }
         }
     }
 };
