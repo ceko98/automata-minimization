@@ -6,30 +6,13 @@
 #include <algorithm>
 #include <list>
 #include <vector>
+#include <iostream>
+#include "../include/HashDefinitions.h"
 
 #ifndef __AUTOMATA_H___
 #define __AUTOMATA_H___
 
 using namespace std;
-
-template <>
-struct std::hash<pair<int, string>>
-{
-    void hash_combine(size_t &seed, size_t value) const
-    {
-        seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-    }
-
-    size_t operator()(const pair<int, string> &a) const
-    {
-        size_t seed = 0;
-        size_t h1 = hash<int>()(a.first);
-        size_t h2 = hash<string>()(a.second);
-        hash_combine(seed, h1);
-        hash_combine(seed, h2);
-        return seed;
-    }
-};
 
 class Automata
 {
@@ -37,27 +20,29 @@ private:
     vector<string> Sigma;
 
     int Q_size;
-    int *Q;
-    bool *I;
-    int q;
-    bool *F;
-    unordered_map<pair<int, string>, int> Delta;
-    // unordered_map<pair<int, string>, int> Delta_rev;
-    list<pair<int, string>> *Delta_rev;
+    int q0;
+    vector<bool> F;
+    unordered_map<int, unordered_map<string, int>> Delta;
+    unordered_map<int, vector<pair<string, int>>> Delta_rev;
 
 public:
-    Automata(/* args */);
+    Automata(
+        vector<string> Sigma,
+        int Q_size,
+        int q0,
+        vector<bool> F,
+        unordered_map<int, unordered_map<string, int>> Delta,
+        unordered_map<int, vector<pair<string, int>>> Delta_rev
+    );
     ~Automata();
 
-    pair<int *, int> get_ranks()
+    pair<vector<int>, int> get_ranks()
     {
-        int *rank = new int[Q_size];
-        int *degree = new int[Q_size];
-        init_with(rank, Q_size, -1);
-        init_with(degree, Q_size, 0);
-        for (const auto &[key, val] : Delta)
+        vector<int> rank(Q_size, -1);
+        vector<int> degree(Q_size, 0);
+        for (const auto &[p, trans] : Delta)
         {
-            degree[key.first] += 1;
+            degree[p] += trans.size();
         }
         queue<int> queue;
         for (int i = 0; i < Q_size; i++)
@@ -69,11 +54,11 @@ public:
             }
         }
         int R = 0;
-        while (queue.empty())
+        while (!queue.empty())
         {
             int q = queue.front();
             queue.pop();
-            for (auto &[p, a] : Delta_rev[q])
+            for (const auto& [a, p]: Delta_rev[q])
             {
                 rank[p] = max(rank[p], rank[q] + 1);
                 degree[p] -= 1;
@@ -87,49 +72,77 @@ public:
         return {rank, R};
     }
 
-    int *minimize()
+    vector<int> minimize()
     {
         const auto &[rank, R] = get_ranks();
-        vector<vector<int>> B_classes(2 * (R - 1));
-        int *class_arr = new int[Q_size];
+        vector<vector<int>> B_classes(2*R);
+        vector<int> class_arr(Q_size);
         int next_class = 0;
         for (int i = 0; i < Q_size; i++)
         {
-            int q = Q[i];
+            int q = i;
             int r = rank[q];
-            int f = F[q] ? 0 : 1;
-            vector<int> B_r_f = B_classes[2 * r + f];
-            if (B_r_f.size() == 0)
+            int B_ind = 0;
+            if (r == R)
+            {
+                B_ind = 1;
+            }
+            else if (r == 0)
+            {
+                B_ind = 0;
+            }
+            else {
+                int f = F[q] ? 0 : 1;
+                B_ind = 2 * r + f;
+            }
+
+            if (B_classes[B_ind].size() == 0)
             {
                 class_arr[q] = next_class;
                 next_class += 1;
             }
             else
             {
-                class_arr[q] = class_arr[B_r_f[0]];
+                class_arr[q] = class_arr[B_classes[B_ind][0]];
             }
-            B_r_f.push_back(q);
+            B_classes[B_ind].push_back(q);
         }
+
+        
         for (int t = 1; t < R - 1; t++)
         {
             next_class = partition(B_classes[2 * (t - 1)], class_arr, next_class);
             next_class = partition(B_classes[2 * (t - 1) + 1], class_arr, next_class);
         }
+
+        for (int i = 0; i < Q_size; i++)
+        {
+            cout << i << " " << class_arr[i] << endl;
+        }
+        
         return class_arr;
     }
 
-    int partition(vector<int> B, int *class_arr, int next_class)
+    int partition(vector<int> &B, vector<int> &class_arr, int next_class)
     {
+        if (B.size() == 0)
+        {
+            return next_class;
+        }
         vector<vector<int>> M(B.size(), vector<int>(Sigma.size()));
         for (int i = 0; i < B.size(); i++)
         {
             for (int j = 0; j < Sigma.size(); j++)
             {
-                M[i][j] = class_arr[Delta[{B[i], Sigma[j]}]];
+                int class_value = Delta.find(B[i]) != Delta.end()
+                    && Delta[B[i]].find(Sigma[j]) != Delta[B[i]].end() ?
+                    class_arr[Delta[B[i]][Sigma[j]]] : next_class;
+                M[i][j] = class_value;
             }
         }
-        vector<int> sorted_rows = sort(M);
+        vector<int> sorted_rows = sort(M, next_class + 1);
         int current_class = class_arr[B[0]];
+
         for (int i = 0; i < B.size(); i++)
         {
             if (i != 0 && !same_vectors(M[sorted_rows[i]], M[sorted_rows[i - 1]]))
@@ -139,16 +152,15 @@ public:
             }
             class_arr[B[sorted_rows[i]]] = current_class;
         }
-        
         return next_class;
     }
 
-    vector<int> sort(vector<vector<int>> &M)
+    vector<int> sort(vector<vector<int>> &M, int max_classes)
     {
         vector<int> sorted_rows(M.size());
         for (int j = Sigma.size() - 1; j >= 0; j--)
         {
-            vector<queue<int>> buckets(M.size());
+            vector<queue<int>> buckets(max_classes);
             for (int i = 0; i < M.size(); i++)
             {
                 buckets[M[i][j]].push(i);
@@ -166,7 +178,7 @@ public:
         return sorted_rows;
     }
 
-    bool same_vectors(vector<int> a, vector<int> b)
+    bool same_vectors(vector<int> &a, vector<int> &b)
     {
         for (int i = 0; i < a.size(); i++)
         {
@@ -188,7 +200,14 @@ public:
     }
 };
 
-Automata::Automata(/* args */)
+Automata::Automata(
+    vector<string> Sigma,
+    int Q_size,
+    int q0,
+    vector<bool> F,
+    unordered_map<int, unordered_map<string, int>> Delta,
+    unordered_map<int, vector<pair<string, int>>> Delta_rev
+) : Sigma(Sigma), Q_size(Q_size), q0(q0), F(F), Delta(Delta), Delta_rev(Delta_rev)
 {
 }
 
