@@ -17,8 +17,7 @@ using namespace std;
 class Automata
 {
 private:
-    vector<string> Sigma;
-
+    vector<string> Alphabet;
     int Q_size;
     int q0;
     vector<bool> F;
@@ -27,7 +26,7 @@ private:
 
 public:
     Automata(
-        vector<string> Sigma,
+        vector<string> Alphabet,
         int Q_size,
         int q0,
         vector<bool> F,
@@ -78,9 +77,8 @@ public:
         vector<vector<int>> B_classes(2*R);
         vector<int> class_arr(Q_size);
         int next_class = 0;
-        for (int i = 0; i < Q_size; i++)
+        for (int q = 0; q < Q_size; q++)
         {
-            int q = i;
             int r = rank[q];
             int B_ind = 0;
             if (r == R)
@@ -129,14 +127,14 @@ public:
         {
             return next_class;
         }
-        vector<vector<int>> M(B.size(), vector<int>(Sigma.size()));
+        vector<vector<int>> M(B.size(), vector<int>(Alphabet.size()));
         for (int i = 0; i < B.size(); i++)
         {
-            for (int j = 0; j < Sigma.size(); j++)
+            for (int j = 0; j < Alphabet.size(); j++)
             {
                 int class_value = Delta.find(B[i]) != Delta.end()
-                    && Delta[B[i]].find(Sigma[j]) != Delta[B[i]].end() ?
-                    class_arr[Delta[B[i]][Sigma[j]]] : next_class;
+                    && Delta[B[i]].find(Alphabet[j]) != Delta[B[i]].end() ?
+                    class_arr[Delta[B[i]][Alphabet[j]]] : next_class;
                 M[i][j] = class_value;
             }
         }
@@ -158,7 +156,7 @@ public:
     vector<int> sort(vector<vector<int>> &M, int max_classes)
     {
         vector<int> sorted_rows(M.size());
-        for (int j = Sigma.size() - 1; j >= 0; j--)
+        for (int j = Alphabet.size() - 1; j >= 0; j--)
         {
             vector<queue<int>> buckets(max_classes);
             for (int i = 0; i < M.size(); i++)
@@ -201,13 +199,13 @@ public:
 };
 
 Automata::Automata(
-    vector<string> Sigma,
+    vector<string> Alphabet,
     int Q_size,
     int q0,
     vector<bool> F,
     unordered_map<int, unordered_map<string, int>> Delta,
     unordered_map<int, vector<pair<string, int>>> Delta_rev
-) : Sigma(Sigma), Q_size(Q_size), q0(q0), F(F), Delta(Delta), Delta_rev(Delta_rev)
+) : Alphabet(Alphabet), Q_size(Q_size), q0(q0), F(F), Delta(Delta), Delta_rev(Delta_rev)
 {
 }
 
