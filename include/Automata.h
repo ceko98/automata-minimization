@@ -16,23 +16,20 @@ using namespace std;
 
 class Automata
 {
-private:
+public:
     vector<string> Alphabet;
     int Q_size;
     int q0;
     vector<bool> F;
     unordered_map<int, unordered_map<string, int>> Delta;
-    unordered_map<int, vector<pair<string, int>>> Delta_rev;
+    unordered_map<int, unordered_set<pair<string, int>>> Delta_rev;
 
 public:
     Automata(
-        vector<string> Alphabet,
         int Q_size,
         int q0,
         vector<bool> F,
-        unordered_map<int, unordered_map<string, int>> Delta,
-        unordered_map<int, vector<pair<string, int>>> Delta_rev
-    );
+        unordered_map<int, unordered_map<string, int>> Delta);
     ~Automata();
 
     pair<vector<int>, int> get_ranks()
@@ -57,7 +54,7 @@ public:
         {
             int q = queue.front();
             queue.pop();
-            for (const auto& [a, p]: Delta_rev[q])
+            for (const auto &[a, p] : Delta_rev[q])
             {
                 rank[p] = max(rank[p], rank[q] + 1);
                 degree[p] -= 1;
@@ -74,7 +71,7 @@ public:
     vector<int> minimize()
     {
         const auto &[rank, R] = get_ranks();
-        vector<vector<int>> B_classes(2*R);
+        vector<vector<int>> B_classes(2 * R);
         vector<int> class_arr(Q_size);
         int next_class = 0;
         for (int q = 0; q < Q_size; q++)
@@ -89,7 +86,8 @@ public:
             {
                 B_ind = 0;
             }
-            else {
+            else
+            {
                 int f = F[q] ? 0 : 1;
                 B_ind = 2 * r + f;
             }
@@ -106,18 +104,17 @@ public:
             B_classes[B_ind].push_back(q);
         }
 
-        
-        for (int t = 1; t < R - 1; t++)
+        for (int t = 1; t < R; t++)
         {
-            next_class = partition(B_classes[2 * (t - 1)], class_arr, next_class);
-            next_class = partition(B_classes[2 * (t - 1) + 1], class_arr, next_class);
+            next_class = partition(B_classes[2 * t], class_arr, next_class);
+            next_class = partition(B_classes[2 * t + 1], class_arr, next_class);
         }
 
-        for (int i = 0; i < Q_size; i++)
-        {
-            cout << i << " " << class_arr[i] << endl;
-        }
-        
+        // for (int i = 0; i < Q_size; i++)
+        // {
+        //     cout << i << " " << class_arr[i] << endl;
+        // }
+
         return class_arr;
     }
 
@@ -132,9 +129,7 @@ public:
         {
             for (int j = 0; j < Alphabet.size(); j++)
             {
-                int class_value = Delta.find(B[i]) != Delta.end()
-                    && Delta[B[i]].find(Alphabet[j]) != Delta[B[i]].end() ?
-                    class_arr[Delta[B[i]][Alphabet[j]]] : next_class;
+                int class_value = Delta.find(B[i]) != Delta.end() && Delta[B[i]].find(Alphabet[j]) != Delta[B[i]].end() ? class_arr[Delta[B[i]][Alphabet[j]]] : next_class;
                 M[i][j] = class_value;
             }
         }
@@ -150,6 +145,7 @@ public:
             }
             class_arr[B[sorted_rows[i]]] = current_class;
         }
+
         return next_class;
     }
 
@@ -185,28 +181,61 @@ public:
                 return false;
             }
         }
-        
+
         return true;
     }
 
-    void init_with(int *arr, int sz, int val)
+    void print()
     {
-        for (size_t i = 0; i < sz; i++)
+        cout << "automata ============ "<< endl;
+        for (int i = 0; i < Alphabet.size(); i++)
         {
-            arr[i] = val;
+            cout << Alphabet[i] << " ";
         }
+        cout << endl;
+        
+        cout << "0..." << Q_size - 1 << endl;
+        cout << q0 << endl;
+        cout << "f: ";
+        for (int i = 0; i < Q_size; i++)
+        {
+            if (F[i])
+            {
+                cout << i << " ";
+            }
+        }
+        cout << "============ "<< endl;
+        for(auto &[p, trans] : Delta)
+        {
+            for(auto &[a, q] : trans)
+            {
+                cout << "(" << p << " " << a << " " << q << ")" << endl; 
+            }
+        }
+        cout << "automata ============ "<< endl;
     }
 };
 
 Automata::Automata(
-    vector<string> Alphabet,
     int Q_size,
     int q0,
     vector<bool> F,
-    unordered_map<int, unordered_map<string, int>> Delta,
-    unordered_map<int, vector<pair<string, int>>> Delta_rev
-) : Alphabet(Alphabet), Q_size(Q_size), q0(q0), F(F), Delta(Delta), Delta_rev(Delta_rev)
+    unordered_map<int, unordered_map<string, int>> Delta) : Q_size(Q_size), q0(q0), F(F), Delta(Delta)
 {
+    unordered_set<string> Alphabet_set;
+    for (const auto &[p, trans] : Delta)
+    {
+        for (const auto &[a, q] : trans)
+        {
+            Delta_rev[q].insert({a, p});
+            Alphabet_set.insert(a);
+        }
+    }
+
+    for (auto &a : Alphabet_set)
+    {
+        Alphabet.push_back(a);
+    }
 }
 
 Automata::~Automata()

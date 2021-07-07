@@ -37,33 +37,13 @@ int main() {
     );
 
     Transformer trimmed = t.trim();
-    trimmed.canonize();
+    Transformer canonized = trimmed.canonize();
+    Automata a_enc = canonized.encode_transformer();
+    vector<int> classes = a_enc.minimize();
+    // a_enc.print();
+    Transformer minimized = Transformer::decode(a_enc, classes, canonized.get_beg_word());
 
-    // int Q_size = 8, q0 = 0;
-    // vector<bool> F = {0,0,0,0,0,0,0,1};
-    // unordered_map<int, unordered_map<string, int>> Delta = {
-    //     {0, {{"a", 1}} },
-    //     {1, {{"a", 2}} },
-    //     {2, {{"b", 3}, {"a", 4}} },
-    //     {3, {{"b", 5}} },
-    //     {4, {{"b", 6}} },
-    //     {5, {{"a", 7}} },
-    //     {6, {{"a", 7}} },
-    // };
-    // unordered_map<int, vector<pair<string, int>>> Delta_rev = {
-    //     {1, {{"a", 0}} },
-    //     {2, {{"b", 1}} },
-    //     {3, {{"b", 2}} },
-    //     {4, {{"a", 2}} },
-    //     {5, {{"b", 3}} },
-    //     {6, {{"b", 4}} },
-    //     {7, {{"a", 5}, {"a", 6}} },
-    // };
+    minimized.print_transformer();
 
-    // vector<string> sigma = { "a", "b" };
-    // Automata a(
-    //     sigma, Q_size, q0, F, Delta, Delta_rev
-    // );
-    // a.minimize();
     return 0;
 }

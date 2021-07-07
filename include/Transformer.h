@@ -22,7 +22,6 @@ using Finals_Exit = unordered_map<int, string>;
 class Transformer
 {
 private:
-    // vector<pair<char, string>> Language;
     int Q_size;
     int q0;
     vector<bool> F;
@@ -49,6 +48,11 @@ public:
         }
     };
     ~Transformer();
+
+    string get_beg_word()
+    {
+        return beg_word;
+    }
 
     Transformer trim()
     {
@@ -155,14 +159,6 @@ public:
     Transformer canonize()
     {
         vector<string> mso = maximal_state_output();
-        // cout << "==============" << endl;
-
-        // for (int i = 0; i < mso.size(); i++)
-        // {
-        //     cout << i << " " << mso[i] << endl;
-        //     ;
-        // }
-        // cout << "==============" << endl;
 
         string beg_word_C = beg_word + mso[q0];
         Transitions_Exit Lambda_C;
@@ -171,7 +167,6 @@ public:
             int p = key.first;
             char a = key.second;
             string new_word = (word + mso[Delta[p][a]]).substr(mso[p].size());
-            // cout << p << " " << a << " " << word << " " << mso[Delta[p][a]] << " " << new_word << endl;
             Lambda_C[key] = (word + mso[Delta[p][a]]).substr(mso[p].size());
         }
 
@@ -180,12 +175,6 @@ public:
         {
             Pfi_C[p] = word.substr(mso[p].size());
         }
-
-        // cout << "==============" << endl;
-        // for (auto &[p, word] : Lambda_C)
-        // {
-        //     cout << "(" << p.first << " " << p.second << " " << word << ")" << endl;
-        // }
 
         return Transformer(
             Q_size, q0, F, beg_word_C, Delta, Lambda_C, Pfi_C
@@ -248,8 +237,6 @@ public:
             pop_heap(heap.begin(), heap.end(), cmp);
             int u = heap.back();
             heap.pop_back();
-
-            cout << u << endl;
 
             for (const auto &[word, p] : Delta_A_rev_plus[u])
             {
@@ -322,18 +309,20 @@ public:
         }
     }
 
-    void encode_transformer()
+    Automata encode_transformer()
     {
         int Q_enc_size = Q_size + 1;
-        bool *F_enc = new bool[Q_enc_size];
-        unordered_map<pair<int, string>, int> Delta_enc;
+        vector<bool> F_enc(Q_enc_size, false);
+        F_enc[Q_enc_size - 1] = true;
+        unordered_map<int, unordered_map<string, int>> Delta_enc;
         for (const auto &[key, word] : Lambda)
         {
+            auto &[p, a] = key;
             string letter;
             letter += key.second;
             letter += "/";
             letter += word;
-            Delta_enc[{key.first, letter}] = Delta[key.first][key.second];
+            Delta_enc[p].insert({letter, Delta[p][a]});
         }
         for (int q = 0; q < Q_size; q++)
         {
@@ -342,23 +331,87 @@ public:
                 string letter;
                 letter += "@/";
                 letter += Pfi[q];
-                Delta_enc[{q, letter}] = Q_enc_size;
+                Delta_enc[q].insert({letter, Q_enc_size - 1});
             }
         }
-        // minimize the automata
+
+        return Automata(
+            Q_enc_size, q0, F_enc, Delta_enc  
+        );
+    }
+
+    static Transformer decode(Automata &aut, vector<int> &class_arr, string beg_word)
+    {
+        int Q_size_dec = 0;
+        class_arr.pop_back();
+        for (int i = 0; i < class_arr.size(); i++)
+        {
+            Q_size_dec = max(Q_size_dec, class_arr[i]);
+        }
+        Q_size_dec++;
+
+        unordered_map<int, unordered_map<char, int>> Delta_dec;
+        unordered_map<pair<int, char>, string> Lambda_dec;
+        unordered_map<int, string> Pfi_dec;
+        vector<bool> F_dec(Q_size_dec, false);
+
+        for (auto &[p, trans] : aut.Delta)
+        {
+            for (auto &[word, q] : trans)
+            {
+                char a = word[0];
+                string exit = word.substr(2);
+                if (aut.F[q])
+                {
+                    Pfi_dec[class_arr[p]] = exit;
+                    F_dec[class_arr[p]] = true;
+                }
+                else
+                {
+                    Delta_dec[class_arr[p]][a] = class_arr[q];
+                    Lambda_dec[{class_arr[p], a}] = exit;
+                }
+            }
+        }
+
+        return Transformer(
+            Q_size_dec, aut.q0, F_dec, beg_word, Delta_dec, Lambda_dec, Pfi_dec
+        );
+    }
+
+    void print_transformer()
+    {
+        cout << "states 0..." << Q_size << endl;
+        cout << q0 << endl;
+        for (int i = 0; i < Q_size; i++)
+        {
+            if (F[i])
+            {
+                cout << i << " ";
+            }
+        }
+        cout << endl;
+        for(auto &[p, trans] : Delta)
+        {
+            for(auto &[a, q] : trans)
+            {
+                cout << "(" << p << " " << a << " " << q << ")" << endl; 
+            }
+        }
+        cout << "==========" << endl;
+        for(auto &[key, w] : Lambda)
+        {
+            cout << "(" << key.first << " " << key.second << " " << w << ")" << endl;
+        }
+        cout << "==========" << endl;
+        for(auto &[f, w] : Pfi)
+        {
+            cout << "(" << f << " " << w << ")" << endl;
+        }
+        cout << "==========" << endl;
+        cout << "beg word: " << beg_word << endl;
     }
 };
-
-// Transformer::Transformer(
-//     int Q_size, int q0, vector<bool> F, string beg_word,
-//     unordered_map<int, unordered_map<char, int>> Delta,
-//     unordered_map<int, unordered_set<pair<char, int>>> Delta_rev,
-//     unordered_map<pair<int, char>, string> Lambda,
-//     unordered_map<int, string> Pfi
-// )
-// {
-
-// }
 
 Transformer::~Transformer()
 {
