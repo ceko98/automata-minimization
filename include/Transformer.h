@@ -381,7 +381,7 @@ public:
 
     void print_transformer()
     {
-        cout << "states 0..." << Q_size << endl;
+        cout << "states 0..." << Q_size - 1 << endl;
         cout << q0 << endl;
         for (int i = 0; i < Q_size; i++)
         {
