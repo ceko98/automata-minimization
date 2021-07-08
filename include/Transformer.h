@@ -8,6 +8,7 @@
 #include <vector>
 #include <limits>
 #include <stack>
+#include <set>
 #include <iostream>
 #include "../include/HashDefinitions.h"
 #include "../include/Automata.h"
@@ -200,7 +201,6 @@ public:
         {
             if (F[q])
             {
-                cout << q << " ";
                 Delta_A[q].insert({Pfi[q], F_A});
                 Delta_A_rev[F_A].insert({Pfi[q], q});
             }
@@ -222,19 +222,27 @@ public:
             Delta_A_rev_plus[F_A].insert({prefix, p});
         }
 
-        vector<int> heap;
         vector<int> dist(Q_A_size, numeric_limits<int>::max());
+        set<int> s;
         dist[F_A] = 0;
         for (int q = 0; q < Q_A_size; q++)
         {
-            heap.push_back(q);
+            s.insert(q);
         }
-        auto cmp = [dist](int l, int r)
-        { return dist[l] > dist[r]; };
-        make_heap(heap.begin(), heap.end(), cmp);
-        while (heap.size())
+
+        while (!s.empty())
         {
-            int u = heap.front();
+            int u = *s.begin();
+            for (auto i : s)
+            {
+                if (dist[i] < dist[u])
+                {
+                    u = i;
+                }
+            }
+
+            s.erase(u);
+            // cout << u << endl;
             for (const auto &[word, p] : Delta_A_rev_plus[u])
             {
                 int alt = dist[u] + word;
@@ -243,8 +251,6 @@ public:
                     dist[p] = alt;
                 }
             }
-            pop_heap(heap.begin(), heap.end(), cmp);
-            heap.pop_back();
         }
 
         vector<int> maximal_state_output(Q_A_size, 0);

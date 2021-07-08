@@ -62,12 +62,12 @@ int main()
     // t.print_transformer();
     Transformer trimmed = t.trim();
     Transformer canonized = trimmed.canonize();
-    canonized.print_transformer();
-    // Automata a_enc = canonized.encode_transformer();
-    // vector<int> classes = a_enc.minimize();
-    // Transformer minimized = Transformer::decode(a_enc, classes, canonized.get_beg_word());
+    // canonized.print_transformer();
+    Automata a_enc = canonized.encode_transformer();
+    vector<int> classes = a_enc.minimize();
+    Transformer minimized = Transformer::decode(a_enc, classes, canonized.get_beg_word());
 
-    // minimized.print_transformer();
+    minimized.print_transformer();
 
     return 0;
 }
