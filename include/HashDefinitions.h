@@ -82,4 +82,24 @@ struct std::hash<pair<string, int>>
     }
 };
 
+
+template <>
+struct std::hash<pair<int, int>>
+{
+    void hash_combine(size_t &seed, size_t value) const
+    {
+        seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+
+    size_t operator()(const pair<int, int> &a) const
+    {
+        size_t seed = 0;
+        size_t h1 = hash<int>()(a.first);
+        size_t h2 = hash<int>()(a.second);
+        hash_combine(seed, h1);
+        hash_combine(seed, h2);
+        return seed;
+    }
+};
+
 #endif

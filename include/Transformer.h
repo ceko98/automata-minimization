@@ -7,6 +7,7 @@
 #include <list>
 #include <vector>
 #include <limits>
+#include <stack>
 #include <iostream>
 #include "../include/HashDefinitions.h"
 #include "../include/Automata.h"
@@ -16,8 +17,8 @@
 
 using Transitions = unordered_map<int, unordered_map<char, int>>;
 using Transitions_Rev = unordered_map<int, unordered_set<pair<char, int>>>;
-using Transitions_Exit = unordered_map<pair<int, char>, string>;
-using Finals_Exit = unordered_map<int, string>;
+using Transitions_Exit = unordered_map<pair<int, char>, int>;
+using Finals_Exit = unordered_map<int, int>;
 
 class Transformer
 {
@@ -25,19 +26,19 @@ private:
     int Q_size;
     int q0;
     vector<bool> F;
-    string beg_word;
+    int beg_word;
     unordered_map<int, unordered_map<char, int>> Delta;
     unordered_map<int, unordered_set<pair<char, int>>> Delta_rev;
-    unordered_map<pair<int, char>, string> Lambda;
-    unordered_map<int, string> Pfi;
+    unordered_map<pair<int, char>, int> Lambda;
+    unordered_map<int, int> Pfi;
 
 public:
     Transformer();
     Transformer(
-        int Q_size, int q0, vector<bool> F, string beg_word,
+        int Q_size, int q0, vector<bool> F, int beg_word,
         unordered_map<int, unordered_map<char, int>> Delta,
-        unordered_map<pair<int, char>, string> Lambda,
-        unordered_map<int, string> Pfi) : Q_size(Q_size), q0(q0), F(F), beg_word(beg_word), Delta(Delta), Lambda(Lambda), Pfi(Pfi)
+        unordered_map<pair<int, char>, int> Lambda,
+        unordered_map<int, int> Pfi) : Q_size(Q_size), q0(q0), F(F), beg_word(beg_word), Delta(Delta), Lambda(Lambda), Pfi(Pfi)
     {
         for (const auto &[p, trans] : Delta)
         {
@@ -49,7 +50,7 @@ public:
     };
     ~Transformer();
 
-    string get_beg_word()
+    int get_beg_word()
     {
         return beg_word;
     }
@@ -60,7 +61,7 @@ public:
         vector<bool> coaccessible = get_coaccessible();
 
         unordered_map<int, unordered_map<char, int>> Delta_trim;
-        unordered_map<pair<int, char>, string> Lambda_trim;
+        unordered_map<pair<int, char>, int> Lambda_trim;
 
         unordered_map<int, int> old_new;
         int leftmost = 0;
@@ -95,7 +96,7 @@ public:
             }
         }
 
-        unordered_map<int, string> Pfi_trim;
+        unordered_map<int, int> Pfi_trim;
         for (auto [f, word] : Pfi)
         {
             Pfi_trim[old_new[f]] = word;
@@ -158,22 +159,22 @@ public:
 
     Transformer canonize()
     {
-        vector<string> mso = maximal_state_output();
+        vector<int> mso = maximal_state_output();
 
-        string beg_word_C = beg_word + mso[q0];
+        int beg_word_C = beg_word + mso[q0];
         Transitions_Exit Lambda_C;
         for (const auto &[key, word] : Lambda)
         {
             int p = key.first;
             char a = key.second;
-            string new_word = (word + mso[Delta[p][a]]).substr(mso[p].size());
-            Lambda_C[key] = (word + mso[Delta[p][a]]).substr(mso[p].size());
+            int new_word = (word + mso[Delta[p][a]] - mso[p]);
+            Lambda_C[key] = (word + mso[Delta[p][a]] - mso[p]);
         }
 
         Finals_Exit Pfi_C;
         for (const auto &[p, word] : Pfi)
         {
-            Pfi_C[p] = word.substr(mso[p].size());
+            Pfi_C[p] = word - mso[p];
         }
 
         return Transformer(
@@ -181,12 +182,12 @@ public:
         );
     }
 
-    vector<string> maximal_state_output()
+    vector<int> maximal_state_output()
     {
         int Q_A_size = Q_size + 1;
         int F_A = Q_A_size - 1;
-        unordered_map<int, unordered_map<string, int>> Delta_A;
-        unordered_map<int, unordered_set<pair<string, int>>> Delta_A_rev;
+        unordered_map<int, unordered_map<int, int>> Delta_A;
+        unordered_map<int, unordered_set<pair<int, int>>> Delta_A_rev;
         for (const auto &[p, letter_to_state] : Delta)
         {
             for (const auto &[a, q] : letter_to_state)
@@ -199,29 +200,29 @@ public:
         {
             if (F[q])
             {
-
+                cout << q << " ";
                 Delta_A[q].insert({Pfi[q], F_A});
                 Delta_A_rev[F_A].insert({Pfi[q], q});
             }
         }
 
-        vector<string> words(Q_A_size);
+        vector<int> words(Q_A_size, 0);
         vector<bool> visited(Q_A_size, false);
-        find_words(F_A, "", visited, q0, Delta_A_rev, words);
-        unordered_map<int, unordered_set<pair<string, int>>> Delta_A_rev_plus(Delta_A_rev);
+        find_words(F_A, 0, visited, q0, Delta_A_rev, words);
+
+        unordered_map<int, unordered_set<pair<int, int>>> Delta_A_rev_plus(Delta_A_rev);
         for (int p = 0; p < Q_A_size; p++)
         {
-            vector<string> for_add;
+            int prefix = numeric_limits<int>::max();
             for (const auto &[a, q] : Delta_A[p])
             {
-                for_add.push_back(a + words[q]);
+                prefix = min(prefix, a + words[q]);
             }
-            string prefix = largest_common_prefix(for_add);
+            prefix = Delta_A[p].size() == 0 ? 0 : prefix;
             Delta_A_rev_plus[F_A].insert({prefix, p});
         }
 
         vector<int> heap;
-        vector<int> prev(Q_A_size, -1);
         vector<int> dist(Q_A_size, numeric_limits<int>::max());
         dist[F_A] = 0;
         for (int q = 0; q < Q_A_size; q++)
@@ -231,67 +232,37 @@ public:
         auto cmp = [dist](int l, int r)
         { return dist[l] > dist[r]; };
         make_heap(heap.begin(), heap.end(), cmp);
-
         while (heap.size())
         {
-            pop_heap(heap.begin(), heap.end(), cmp);
-            int u = heap.back();
-            heap.pop_back();
-
+            int u = heap.front();
             for (const auto &[word, p] : Delta_A_rev_plus[u])
             {
-                int alt = dist[u] + word.size();
+                int alt = dist[u] + word;
                 if (alt < dist[p])
                 {
                     dist[p] = alt;
-                    prev[p] = u;
                 }
             }
+            pop_heap(heap.begin(), heap.end(), cmp);
+            heap.pop_back();
         }
 
-        vector<string> maximal_state_output(Q_A_size);
+        vector<int> maximal_state_output(Q_A_size, 0);
         for (int q = 0; q < maximal_state_output.size(); q++)
         {
-            maximal_state_output[q] = words[q].substr(0, dist[q]);
+            maximal_state_output[q] = dist[q];
         }
-        
-        return maximal_state_output;
-    }
 
-    string largest_common_prefix(vector<string> &words)
-    {
-        if (words.size() == 0)
-        {
-            return "";
-        }
-        int to_size = numeric_limits<int>::max();
-        for (auto &word : words)
-        {
-            to_size = min(to_size, (int)word.size());
-        }
-        string result = "";
-        for (int i = 0; i < to_size; i++)
-        {
-            char cmp = words[0][i];
-            for (int j = 1; j < words.size(); j++)
-            {
-                if (words[j][i] != cmp)
-                {
-                    return result;
-                }
-            }
-            result += cmp;
-        }
-        return result;
+        return maximal_state_output;
     }
 
     void find_words(
         int current,
-        string current_word,
+        int current_word,
         vector<bool> &visited,
         int initial,
-        unordered_map<int, unordered_set<pair<string, int>>> &transitions,
-        vector<string> &words)
+        unordered_map<int, unordered_set<pair<int, int>>> &transitions,
+        vector<int> &words)
     {
         words[current] = current_word;
         visited[current] = true;
@@ -321,7 +292,7 @@ public:
             string letter;
             letter += key.second;
             letter += "/";
-            letter += word;
+            letter += to_string(word);
             Delta_enc[p].insert({letter, Delta[p][a]});
         }
         for (int q = 0; q < Q_size; q++)
@@ -330,7 +301,7 @@ public:
             {
                 string letter;
                 letter += "@/";
-                letter += Pfi[q];
+                letter += to_string(Pfi[q]);
                 Delta_enc[q].insert({letter, Q_enc_size - 1});
             }
         }
@@ -340,7 +311,7 @@ public:
         );
     }
 
-    static Transformer decode(Automata &aut, vector<int> &class_arr, string beg_word)
+    static Transformer decode(Automata &aut, vector<int> &class_arr, int beg_word)
     {
         int Q_size_dec = 0;
         class_arr.pop_back();
@@ -351,8 +322,8 @@ public:
         Q_size_dec++;
 
         unordered_map<int, unordered_map<char, int>> Delta_dec;
-        unordered_map<pair<int, char>, string> Lambda_dec;
-        unordered_map<int, string> Pfi_dec;
+        unordered_map<pair<int, char>, int> Lambda_dec;
+        unordered_map<int, int> Pfi_dec;
         vector<bool> F_dec(Q_size_dec, false);
 
         for (auto &[p, trans] : aut.Delta)
@@ -360,7 +331,9 @@ public:
             for (auto &[word, q] : trans)
             {
                 char a = word[0];
-                string exit = word.substr(2);
+                
+                string exit_word = word.substr(2);
+                int exit = (exit_word.size() == 0 ? 0 : stoi(exit_word));
                 if (aut.F[q])
                 {
                     Pfi_dec[class_arr[p]] = exit;
@@ -395,13 +368,8 @@ public:
         {
             for(auto &[a, q] : trans)
             {
-                cout << "(" << p << " " << a << " " << q << ")" << endl; 
+                cout << "(" << p << " " << q << " " << a << " " << Lambda[{p,a}] << ")" << endl; 
             }
-        }
-        cout << "==========" << endl;
-        for(auto &[key, w] : Lambda)
-        {
-            cout << "(" << key.first << " " << key.second << " " << w << ")" << endl;
         }
         cout << "==========" << endl;
         for(auto &[f, w] : Pfi)
@@ -410,6 +378,23 @@ public:
         }
         cout << "==========" << endl;
         cout << "beg word: " << beg_word << endl;
+    }
+
+    bool is_cyclic(int curr, vector<bool> &passed)
+    {
+        vector<int> colors(Q_size, -1);
+        
+        for(auto &[a, p] : Delta[curr])
+        {
+            if (passed[p]) {
+                return true;
+            } else {
+                return is_cyclic(p, passed);
+            }
+        }
+        passed[curr] = false;
+        
+        return false;
     }
 };
 
