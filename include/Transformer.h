@@ -64,6 +64,23 @@ public:
         unordered_map<int, unordered_map<char, int>> Delta_trim;
         unordered_map<pair<int, char>, int> Lambda_trim;
 
+        for (size_t i = 0; i < accessible.size(); i++)
+        {
+            if (!accessible[i])
+            {
+                cout << i << " is not acc" << endl;
+            }
+        }
+        
+
+        for (size_t i = 0; i < coaccessible.size(); i++)
+        {
+            if (!coaccessible[i])
+            {
+                cout << i << " is not coacc" << endl;
+            }
+        }
+
         unordered_map<int, int> old_new;
         int leftmost = 0;
         for (int q = 0; q < Q_size; q++)
@@ -103,6 +120,7 @@ public:
             Pfi_trim[old_new[f]] = word;
         }
 
+        cout << Q_trim_size << endl;
         return Transformer(
             Q_trim_size, q0, F_trim, beg_word, Delta_trim, Lambda_trim, Pfi_trim);
     }
@@ -242,7 +260,6 @@ public:
             }
 
             s.erase(u);
-            // cout << u << endl;
             for (const auto &[word, p] : Delta_A_rev_plus[u])
             {
                 int alt = dist[u] + word;
@@ -360,30 +377,39 @@ public:
 
     void print_transformer()
     {
-        cout << "states 0..." << Q_size - 1 << endl;
-        cout << q0 << endl;
+        // cout << "states 0..." << Q_size - 1 << endl;
+        // cout << q0 << endl;
+
+        cout << "states coutn " << Q_size << endl;
+        int F_size = 0;
         for (int i = 0; i < Q_size; i++)
         {
             if (F[i])
             {
                 cout << i << " ";
+                F_size++;
             }
         }
-        cout << endl;
+        cout << "final count "<< F_size << endl;
+
+        // cout << endl;
+        int Delta_count = 0;
         for(auto &[p, trans] : Delta)
         {
+            Delta_count += trans.size();
             for(auto &[a, q] : trans)
             {
-                cout << "(" << p << " " << q << " " << a << " " << Lambda[{p,a}] << ")" << endl; 
+                // cout << "(" << p << " " << q << " " << a << " " << Lambda[{p,a}] << ")" << endl; 
             }
         }
-        cout << "==========" << endl;
-        for(auto &[f, w] : Pfi)
-        {
-            cout << "(" << f << " " << w << ")" << endl;
-        }
-        cout << "==========" << endl;
-        cout << "beg word: " << beg_word << endl;
+        cout << "transitions count " << Delta_count << endl;
+        // cout << "==========" << endl;
+        // for(auto &[f, w] : Pfi)
+        // {
+        //     cout << "(" << f << " " << w << ")" << endl;
+        // }
+        // cout << "==========" << endl;
+        // cout << "beg word: " << beg_word << endl;
     }
 
     bool is_cyclic(int curr, vector<bool> &passed)

@@ -124,6 +124,7 @@ public:
         {
             return next_class;
         }
+        
         vector<vector<int>> M(B.size(), vector<int>(Alphabet.size()));
         for (int i = 0; i < B.size(); i++)
         {
@@ -133,7 +134,8 @@ public:
                 M[i][j] = class_value;
             }
         }
-        vector<int> sorted_rows = sort(M, next_class + 1);
+        // cout << "sorting " << M.size() << M[0].size() << endl;
+        vector<int> sorted_rows = sort(M, next_class);
         int current_class = class_arr[B[0]];
 
         for (int i = 0; i < B.size(); i++)
@@ -149,28 +151,47 @@ public:
         return next_class;
     }
 
-    vector<int> sort(vector<vector<int>> &M, int max_classes)
+
+    vector<int> sort(vector<vector<int>> &M, int next_class)
     {
         vector<int> sorted_rows(M.size());
-        for (int j = Alphabet.size() - 1; j >= 0; j--)
+        for (int i = 0; i < M.size(); i++)
         {
-            vector<queue<int>> buckets(max_classes);
-            for (int i = 0; i < M.size(); i++)
-            {
-                buckets[M[i][j]].push(i);
-            }
-            int k = 0;
-            for (int i = 0; i < buckets.size(); i++)
-            {
-                while (!buckets[i].empty())
-                {
-                    sorted_rows[k++] = buckets[i].front();
-                    buckets[i].pop();
-                }
-            }
+            sorted_rows.push_back(i);
         }
+        for (int i = Alphabet.size() - 1; i >= 0; i--)
+        {
+            // Alphabet[Alphabet.size()];
+            // cout << "sort on " << i << " " << Alphabet.size() << endl;
+            stable_sort(sorted_rows.begin(), sorted_rows.end(), [M, i](const int &l, const int &r){ return M[l][i] < M[r][i]; });
+        }
+        
         return sorted_rows;
     }
+
+    // vector<int> sort(vector<vector<int>> &M, int next_class)
+    // {
+    //     vector<int> sorted_rows(M.size());
+    //     for (int j = Alphabet.size() - 1; j >= 0; j--)
+    //     {
+    //         vector<queue<int>> buckets(next_class + 1);
+    //         for (int i = 0; i < M.size(); i++)
+    //         {
+    //             buckets[M[i][j]].push(i);
+    //         }
+    //         int k = 0;
+    //         for (int i = 0; i < buckets.size(); i++)
+    //         {
+    //             while (!buckets[i].empty())
+    //             {
+    //                 sorted_rows[k] = buckets[i].front();
+    //                 buckets[i].pop();
+    //                 k++;
+    //             }
+    //         }
+    //     }
+    //     return sorted_rows;
+    // }
 
     bool same_vectors(vector<int> &a, vector<int> &b)
     {

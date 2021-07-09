@@ -59,8 +59,15 @@ int main()
         Q_size, q0 - 1, F, 0, delta, lambda, pfi
     );
 
+    /*
+    states: 127
+    finals: 
+    transistions:
+    */
+
     // t.print_transformer();
     Transformer trimmed = t.trim();
+    // trimmed.print_transformer();
     Transformer canonized = trimmed.canonize();
     // canonized.print_transformer();
     Automata a_enc = canonized.encode_transformer();
